@@ -1,90 +1,69 @@
+# Import libraries
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Load Dataset
-df = pd.read_csv("dataset.csv")
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error, r2_score
 
-# -------------------------------
-# Basic Information
-# -------------------------------
-print("First 5 Rows:")
-print(df.head())
+# Load dataset
+df = pd.read_csv("sales.csv")
 
-print("\nDataset Shape:")
-print(df.shape)
+# Convert date column
+df['Date'] = pd.to_datetime(df['Date'])
 
-print("\nColumn Names:")
-print(df.columns)
+# Feature Engineering
+df['Year'] = df['Date'].dt.year
+df['Month'] = df['Date'].dt.month
+df['Day'] = df['Date'].dt.day
+df['DayOfWeek'] = df['Date'].dt.dayofweek
 
-print("\nData Types:")
-print(df.dtypes)
+# Features and Target
+X = df[['Store', 'Item', 'Year', 'Month', 'Day', 'DayOfWeek']]
+y = df['Sales']
 
-print("\nMissing Values:")
-print(df.isnull().sum())
+# Train Test Split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
 
-print("\nStatistical Summary:")
-print(df.describe())
+# Train Model
+model = RandomForestRegressor(
+    n_estimators=100,
+    random_state=42
+)
 
-# -------------------------------
-# Data Cleaning
-# -------------------------------
-# Remove duplicate rows
-df = df.drop_duplicates()
+model.fit(X_train, y_train)
 
-# Fill missing numerical values with median
-num_cols = df.select_dtypes(include=np.number).columns
-for col in num_cols:
-    df[col].fillna(df[col].median(), inplace=True)
+# Prediction
+y_pred = model.predict(X_test)
 
-# Fill missing categorical values with mode
-cat_cols = df.select_dtypes(include='object').columns
-for col in cat_cols:
-    df[col].fillna(df[col].mode()[0], inplace=True)
+# Evaluation
+mae = mean_absolute_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
 
-# -------------------------------
-# Univariate Analysis
-# -------------------------------
+print("Mean Absolute Error:", mae)
+print("R2 Score:", r2)
 
-for col in num_cols:
-    plt.figure(figsize=(6,4))
-    sns.histplot(df[col], kde=True)
-    plt.title(f"Distribution of {col}")
-    plt.show()
-
-# -------------------------------
-# Correlation Analysis
-# -------------------------------
-
-plt.figure(figsize=(10,8))
-sns.heatmap(df[num_cols].corr(),
-            annot=True,
-            cmap="coolwarm",
-            fmt=".2f")
-plt.title("Correlation Matrix")
+# Visualization
+plt.figure(figsize=(8,5))
+sns.scatterplot(x=y_test, y=y_pred)
+plt.xlabel("Actual Sales")
+plt.ylabel("Predicted Sales")
+plt.title("Actual vs Predicted Sales")
 plt.show()
 
-# -------------------------------
-# Boxplots for Outliers
-# -------------------------------
+# Feature Importance
+importance = pd.DataFrame({
+    'Feature': X.columns,
+    'Importance': model.feature_importances_
+}).sort_values(by='Importance', ascending=False)
 
-for col in num_cols:
-    plt.figure(figsize=(6,4))
-    sns.boxplot(x=df[col])
-    plt.title(f"Boxplot of {col}")
-    plt.show()
+print(importance)
 
-# -------------------------------
-# Pairplot
-# -------------------------------
-
-sns.pairplot(df[num_cols])
+plt.figure(figsize=(8,5))
+sns.barplot(x='Importance', y='Feature', data=importance)
+plt.title("Feature Importance")
 plt.show()
-
-# -------------------------------
-# Insights
-# -------------------------------
-
-print("\nEDA Completed Successfully!")
-print("Check visualizations for patterns, trends, correlations, and outliers.")
