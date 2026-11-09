@@ -1,69 +1,282 @@
-# Import libraries
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
+import java.util.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_absolute_error, r2_score
+class Course {
+    int id;
+    String name;
 
-# Load dataset
-df = pd.read_csv("sales.csv")
+    Course(int id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+}
 
-# Convert date column
-df['Date'] = pd.to_datetime(df['Date'])
+class Student {
+    int id;
+    String name;
+    int courseId;
 
-# Feature Engineering
-df['Year'] = df['Date'].dt.year
-df['Month'] = df['Date'].dt.month
-df['Day'] = df['Date'].dt.day
-df['DayOfWeek'] = df['Date'].dt.dayofweek
+    Student(int id, String name, int courseId) {
+        this.id = id;
+        this.name = name;
+        this.courseId = courseId;
+    }
+}
 
-# Features and Target
-X = df[['Store', 'Item', 'Year', 'Month', 'Day', 'DayOfWeek']]
-y = df['Sales']
+class Assignment {
+    int id;
+    String title;
+    int courseId;
+    LocalDateTime deadline;
 
-# Train Test Split
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
-)
+    Assignment(int id, String title, int courseId,
+               LocalDateTime deadline) {
+        this.id = id;
+        this.title = title;
+        this.courseId = courseId;
+        this.deadline = deadline;
+    }
+}
 
-# Train Model
-model = RandomForestRegressor(
-    n_estimators=100,
-    random_state=42
-)
+class Submission {
+    int studentId;
+    int assignmentId;
+    String content;
+    LocalDateTime submittedTime;
 
-model.fit(X_train, y_train)
+    Submission(int studentId, int assignmentId,
+               String content, LocalDateTime time) {
+        this.studentId = studentId;
+        this.assignmentId = assignmentId;
+        this.content = content;
+        this.submittedTime = time;
+    }
+}
 
-# Prediction
-y_pred = model.predict(X_test)
+public class AssignmentTracker {
 
-# Evaluation
-mae = mean_absolute_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
+    static Scanner sc = new Scanner(System.in);
 
-print("Mean Absolute Error:", mae)
-print("R2 Score:", r2)
+    static ArrayList<Course> courses = new ArrayList<>();
+    static ArrayList<Student> students = new ArrayList<>();
+    static ArrayList<Assignment> assignments = new ArrayList<>();
+    static ArrayList<Submission> submissions = new ArrayList<>();
 
-# Visualization
-plt.figure(figsize=(8,5))
-sns.scatterplot(x=y_test, y=y_pred)
-plt.xlabel("Actual Sales")
-plt.ylabel("Predicted Sales")
-plt.title("Actual vs Predicted Sales")
-plt.show()
+    static int courseId = 1;
+    static int studentId = 1;
+    static int assignmentId = 1;
 
-# Feature Importance
-importance = pd.DataFrame({
-    'Feature': X.columns,
-    'Importance': model.feature_importances_
-}).sort_values(by='Importance', ascending=False)
+    static DateTimeFormatter format =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-print(importance)
+    public static void main(String[] args) {
 
-plt.figure(figsize=(8,5))
-sns.barplot(x='Importance', y='Feature', data=importance)
-plt.title("Feature Importance")
-plt.show()
+        while (true) {
+            System.out.println("\n===== STUDENT ASSIGNMENT TRACKER =====");
+            System.out.println("1. Add Course");
+            System.out.println("2. Add Student");
+            System.out.println("3. Create Assignment");
+            System.out.println("4. Submit Assignment");
+            System.out.println("5. Track Submissions");
+            System.out.println("6. Exit");
+
+            System.out.print("Enter Your Choice: ");
+            int choice = sc.nextInt();
+            sc.nextLine();
+
+            switch (choice) {
+                case 1:
+                    addCourse();
+                    break;
+                case 2:
+                    addStudent();
+                    break;
+                case 3:
+                    createAssignment();
+                    break;
+                case 4:
+                    submitAssignment();
+                    break;
+                case 5:
+                    trackSubmissions();
+                    break;
+                case 6:
+                    System.out.println("Thank You!");
+                    return;
+                default:
+                    System.out.println("Invalid Choice!");
+            }
+        }
+    }
+
+    // 1. ADD COURSE
+    static void addCourse() {
+        System.out.print("Enter Course Name: ");
+        String name = sc.nextLine();
+
+        courses.add(new Course(courseId++, name));
+
+        System.out.println("Course Added Successfully!");
+    }
+
+    // 2. ADD STUDENT
+    static void addStudent() {
+        System.out.print("Enter Student Name: ");
+        String name = sc.nextLine();
+
+        System.out.print("Enter Course ID: ");
+        int cid = sc.nextInt();
+
+        if (!courseExists(cid)) {
+            System.out.println("Course Not Found!");
+            return;
+        }
+
+        students.add(new Student(studentId++, name, cid));
+
+        System.out.println("Student Added Successfully!");
+    }
+
+    // 3. CREATE ASSIGNMENT WITH DEADLINE
+    static void createAssignment() {
+        System.out.print("Enter Assignment Title: ");
+        String title = sc.nextLine();
+
+        System.out.print("Enter Course ID: ");
+        int cid = sc.nextInt();
+        sc.nextLine();
+
+        if (!courseExists(cid)) {
+            System.out.println("Course Not Found!");
+            return;
+        }
+
+        System.out.print("Enter Deadline (yyyy-MM-dd HH:mm): ");
+        LocalDateTime deadline =
+            LocalDateTime.parse(sc.nextLine(), format);
+
+        assignments.add(
+            new Assignment(assignmentId++, title, cid, deadline)
+        );
+
+        System.out.println("Assignment Created Successfully!");
+    }
+
+    // 4. SUBMIT ASSIGNMENT
+    static void submitAssignment() {
+        System.out.print("Enter Student ID: ");
+        int sid = sc.nextInt();
+
+        System.out.print("Enter Assignment ID: ");
+        int aid = sc.nextInt();
+        sc.nextLine();
+
+        Student student = findStudent(sid);
+        Assignment assignment = findAssignment(aid);
+
+        if (student == null || assignment == null ||
+            student.courseId != assignment.courseId) {
+            System.out.println("Invalid Student or Assignment!");
+            return;
+        }
+
+        for (Submission sub : submissions) {
+            if (sub.studentId == sid &&
+                sub.assignmentId == aid) {
+                System.out.println("Already Submitted!");
+                return;
+            }
+        }
+
+        System.out.print("Enter Assignment Text or Link: ");
+        String content = sc.nextLine();
+
+        submissions.add(new Submission(
+            sid, aid, content, LocalDateTime.now()
+        ));
+
+        System.out.println("Assignment Submitted Successfully!");
+    }
+
+    // 5. TRACK SUBMISSIONS AND LATE WORK
+    static void trackSubmissions() {
+        System.out.print("Enter Assignment ID: ");
+        int aid = sc.nextInt();
+
+        Assignment assignment = findAssignment(aid);
+
+        if (assignment == null) {
+            System.out.println("Assignment Not Found!");
+            return;
+        }
+
+        System.out.println("\nAssignment: " + assignment.title);
+        System.out.println("Deadline: " +
+            assignment.deadline.format(format));
+
+        for (Student s : students) {
+
+            if (s.courseId != assignment.courseId)
+                continue;
+
+            System.out.println("\nStudent: " + s.name);
+
+            Submission found = null;
+
+            for (Submission sub : submissions) {
+                if (sub.studentId == s.id &&
+                    sub.assignmentId == aid) {
+                    found = sub;
+                    break;
+                }
+            }
+
+            if (found == null) {
+                System.out.println("Status: PENDING");
+            } else {
+                System.out.println("Status: SUBMITTED");
+
+                System.out.println("Submission Time: " +
+                    found.submittedTime.format(format));
+
+                if (found.submittedTime.isAfter(
+                    assignment.deadline)) {
+                    System.out.println("Late Work: LATE");
+                } else {
+                    System.out.println("Late Work: ON TIME");
+                }
+
+                System.out.println("Submitted Work: " +
+                    found.content);
+            }
+        }
+    }
+
+    // CHECK COURSE
+    static boolean courseExists(int id) {
+        for (Course c : courses) {
+            if (c.id == id)
+                return true;
+        }
+        return false;
+    }
+
+    // FIND STUDENT
+    static Student findStudent(int id) {
+        for (Student s : students) {
+            if (s.id == id)
+                return s;
+        }
+        return null;
+    }
+
+    // FIND ASSIGNMENT
+    static Assignment findAssignment(int id) {
+        for (Assignment a : assignments) {
+            if (a.id == id)
+                return a;
+        }
+        return null;
+    }
+}
